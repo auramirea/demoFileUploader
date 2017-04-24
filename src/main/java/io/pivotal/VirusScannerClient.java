@@ -4,9 +4,7 @@ import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
@@ -14,14 +12,12 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.*;
 
 
 @Component
-//@Configuration
-//@ConfigurationProperties(prefix="virusServiceConfig")
+@Configuration
+@ConfigurationProperties(prefix="virusServiceConfig")
 public class VirusScannerClient {
     RestTemplate restTemplate;
     private String serviceUri;
@@ -29,28 +25,26 @@ public class VirusScannerClient {
     private String password;
 
     @Autowired
-    public VirusScannerClient(final Environment environment, final RestTemplate restTemplate) {
+    public VirusScannerClient(final RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
-//        this.serviceUri = environment.getProperty("vcap.services.free-virusscanner.credentials.servicePath");
-//        this.password = environment.getProperty("vcap.services.free-virusscanner.credentials.password");
-//        this.username = environment.getProperty("vcap.services.free-virusscanner.credentials.username");
-        this.serviceUri = "http://localhost:8000/scan";
-        this.password = "asdkjhagsdjhbas-password-askduhsukeh";
-        this.username = "asdlfasdlfh-user-asdouhasdui";
     }
 
-    public boolean hasVirus(final MultipartFile file) {
+    boolean hasVirus(final MultipartFile file) {
 
 
         MultiValueMap<String, Object> parameters = new LinkedMultiValueMap<>();
+        parameters.add("filename", file.getOriginalFilename());
         try {
-            List<Object> files = new ArrayList<>();
-            files.add(new ByteArrayResource(file.getBytes()));
-            parameters.add("file", files);
+            ByteArrayResource contentsAsResource = new ByteArrayResource(file.getBytes()){
+                @Override
+                public String getFilename(){
+                    return file.getOriginalFilename();
+                }
+            };
+            parameters.add("file", contentsAsResource);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        parameters.add("filename", file.getOriginalFilename());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         addBasicAuthHeader(headers);
